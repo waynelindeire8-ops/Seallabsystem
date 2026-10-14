@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Test Catalog - Lab Software{% endblock %}
+{% block page_title %}Test Catalog{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <input type="text" class="form-control form-control-sm" id="searchInput" placeholder="Search tests..." style="width:300px">
+    <a href="/catalog/form" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Add Test</a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Test Name</th><th>Category</th><th>Unit</th><th>Reference</th><th>Turnaround</th><th>Price</th><th>Status</th><th></th></tr>
+                </thead>
+                <tbody id="catalogList"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadCatalog() {
+        const data = await apiGet('/catalog/api');
+        if (!data) return;
+        const tbody = document.getElementById('catalogList');
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><p>No tests in catalog</p></td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(t => `
+            <tr>
+                <td><strong>${t.name}</strong></td>
+                <td><span class="badge bg-light text-dark">${t.category}</span></td>
+                <td>${t.unit || '-'}</td>
+                <td><small>${t.reference_text || '-'}</small></td>
+                <td>${t.turnaround_hrs} hrs</td>
+                <td>${t.price > 0 ? "MK " + Number(t.price).toLocaleString() : '<span class="text-muted">Not priced</span>'}</td>
+                <td>${t.active ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Inactive</span>'}</td>
+                <td>
+                    <a href="/catalog/form/${t.id}" class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil"></i></a>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteTest(${t.id})"><i class="bi bi-trash"></i></button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    async function deleteTest(id) {
+        if (await confirmAction('Delete this test from catalog?')) {
+            const res = await apiDelete('/catalog/api/' + id);
+            if (res && res.ok) { showToast('Test deleted'); loadCatalog(); }
+        }
+    }
+
+    loadCatalog();
+</script>
+{% endblock %}

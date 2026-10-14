@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Samples - Lab Software{% endblock %}
+{% block page_title %}Samples{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex gap-2 flex-wrap">
+        <select class="form-select form-select-sm" id="filterStatus" style="width:150px">
+            <option value="">All Status</option>
+            <option value="registered">Registered</option>
+            <option value="triaged">Triaged</option>
+            <option value="analysis">Analysis</option>
+            <option value="review">Review</option>
+            <option value="approved">Approved</option>
+            <option value="reported">Reported</option>
+            <option value="cancelled">Cancelled</option>
+        </select>
+        <select class="form-select form-select-sm" id="filterPriority" style="width:130px">
+            <option value="">All Priority</option>
+            <option value="routine">Routine</option>
+            <option value="urgent">Urgent</option>
+        </select>
+        <input type="text" class="form-control form-control-sm" id="filterSearch" placeholder="Search code or patient..." style="width:220px">
+    </div>
+    <a href="/samples/register" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>Register Sample
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="samplesTable">
+                <thead>
+                    <tr>
+                        <th>Sample Code</th>
+                        <th>Patient</th>
+                        <th>Type</th>
+                        <th>Client</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="sampleList"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadSamples() {
+        const status = document.getElementById('filterStatus').value;
+        const priority = document.getElementById('filterPriority').value;
+        const search = document.getElementById('filterSearch').value;
+        const params = new URLSearchParams();
+        if (status) params.set('status', status);
+        if (priority) params.set('priority', priority);
+        if (search) params.set('search', search);
+
+        const data = await apiGet('/samples/api?' + params.toString());
+        if (!data) return;
+
+        const tbody = document.getElementById('sampleList');
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><i class="bi bi-vials"></i><p>No samples found</p></td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(s => `
+            <tr style="cursor:pointer" onclick="window.location='/samples/${s.id}'">
+                <td><strong>${s.sample_code}</strong></td>
+                <td>${s.patient_name}</td>
+                <td>${s.type_name || '-'}</td>
+                <td>${s.client_name || '-'}</td>
+                <td>${priorityBadge(s.priority)}</td>
+                <td>${statusBadge(s.status)}</td>
+                <td>${formatDateTime(s.created_at)}</td>
+                <td><a href="/samples/${s.id}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a></td>
+            </tr>
+        `).join('');
+    }
+
+    document.getElementById('filterStatus').addEventListener('change', loadSamples);
+    document.getElementById('filterPriority').addEventListener('change', loadSamples);
+    document.getElementById('filterSearch').addEventListener('input', debounce(loadSamples, 300));
+
+    function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+
+    loadSamples();
+</script>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Item Form - Seal MW Lab System{% endblock %}
+{% block page_title %}Add/Edit Item{% endblock %}
+{% block content %}
+<div class="row"><div class="col-lg-8"><div class="card"><div class="card-body">
+    <form id="itemForm"><div class="row g-3">
+        <div class="col-md-8"><label class="form-label">Name *</label><input type="text" class="form-control" id="itemName" required></div>
+        <div class="col-md-4"><label class="form-label">Active</label><select class="form-select" id="itemActive"><option value="1">Yes</option><option value="0">No</option></select></div>
+        <div class="col-md-4"><label class="form-label">SKU</label><input type="text" class="form-control" id="itemSku"></div>
+        <div class="col-md-4"><label class="form-label">Category</label><input type="text" class="form-control" id="itemCategory"></div>
+        <div class="col-md-4"><label class="form-label">Unit</label><input type="text" class="form-control" id="itemUnit" value="pcs"></div>
+        <div class="col-md-3"><label class="form-label">Price (MK)</label><input type="number" step="0.01" class="form-control" id="itemPrice" value="0"></div>
+        <div class="col-md-3"><label class="form-label">Cost (MK)</label><input type="number" step="0.01" class="form-control" id="itemCost" value="0"></div>
+        <div class="col-md-3"><label class="form-label">Quantity</label><input type="number" class="form-control" id="itemQty" value="0"></div>
+        <div class="col-md-3"><label class="form-label">Min Quantity</label><input type="number" class="form-control" id="itemMinQty" value="0"></div>
+        <div class="col-md-6"><label class="form-label">Supplier</label><select class="form-select" id="itemSupplier"><option value="">Select...</option></select></div>
+    </div><div class="mt-4 d-flex gap-2"><button type="submit" class="btn btn-primary">Save</button><a href="/items" class="btn btn-secondary">Cancel</a></div></form>
+</div></div></div></div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    var pathParts = window.location.pathname.split('/');
+    var itemId = pathParts[pathParts.length - 1] !== 'form' ? pathParts[pathParts.length - 1] : null;
+    async function loadDropdowns() { var sup = await apiGet('/suppliers/api'); var sel = document.getElementById('itemSupplier'); if (sup) sup.forEach(function(s) { sel.innerHTML += '<option value="' + s.id + '">' + s.name + '</option>'; }); }
+    async function loadItem() { if (!itemId) return; var d = await apiGet('/items/api/' + itemId); if (d) { document.getElementById('itemName').value = d.name; document.getElementById('itemSku').value = d.sku || ''; document.getElementById('itemCategory').value = d.category || ''; document.getElementById('itemUnit').value = d.unit || 'pcs'; document.getElementById('itemPrice').value = d.price; document.getElementById('itemCost').value = d.cost; document.getElementById('itemQty').value = d.quantity; document.getElementById('itemMinQty').value = d.min_quantity; document.getElementById('itemSupplier').value = d.supplier_id || ''; document.getElementById('itemActive').value = d.active; } }
+    document.getElementById('itemForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var payload = { name: document.getElementById('itemName').value.trim(), sku: document.getElementById('itemSku').value.trim(), category: document.getElementById('itemCategory').value.trim(), unit: document.getElementById('itemUnit').value.trim(), price: parseFloat(document.getElementById('itemPrice').value), cost: parseFloat(document.getElementById('itemCost').value), quantity: parseInt(document.getElementById('itemQty').value), min_quantity: parseInt(document.getElementById('itemMinQty').value), supplier_id: document.getElementById('itemSupplier').value ? parseInt(document.getElementById('itemSupplier').value) : null, active: parseInt(document.getElementById('itemActive').value) };
+        var res; if (itemId) { res = await apiPut('/items/api/' + itemId, payload); } else { res = await apiPost('/items/api', payload); }
+        if (res && res.ok) { showToast('Saved'); window.location.href = '/items'; }
+    });
+    loadDropdowns(); loadItem();
+</script>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Settings - Lab Software{% endblock %}
+{% block page_title %}System Settings{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header"><i class="bi bi-building me-2"></i>Lab Profile</div>
+            <div class="card-body">
+                <form id="settingsForm">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Lab Name</label>
+                            <input type="text" class="form-control" id="lab_name">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Phone</label>
+                            <input type="text" class="form-control" id="lab_phone">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="lab_email">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Address</label>
+                            <textarea class="form-control" id="lab_address" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Settings</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header"><i class="bi bi-info-circle me-2"></i>System Information</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4"><small class="text-muted d-block">System</small><strong>Lab Software</strong></div>
+                    <div class="col-md-4"><small class="text-muted d-block">Version</small><strong>1.0.0</strong></div>
+                    <div class="col-md-4"><small class="text-muted d-block">Stack</small><strong>Flask + SQLite</strong></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadSettings() {
+        const data = await apiGet('/settings/api/config');
+        if (!data) return;
+        for (const [key, value] of Object.entries(data)) {
+            const el = document.getElementById(key);
+            if (el) el.value = value || '';
+        }
+    }
+
+    document.getElementById('settingsForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const payload = {
+            lab_name: document.getElementById('lab_name').value.trim(),
+            lab_phone: document.getElementById('lab_phone').value.trim(),
+            lab_email: document.getElementById('lab_email').value.trim(),
+            lab_address: document.getElementById('lab_address').value.trim()
+        };
+        const res = await apiPut('/settings/api/config', payload);
+        if (res && res.ok) showToast('Settings saved');
+    });
+
+    loadSettings();
+</script>
+{% endblock %}

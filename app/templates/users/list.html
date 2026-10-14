@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Users - Lab Software{% endblock %}
+{% block page_title %}User Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <input type="text" class="form-control form-control-sm" id="searchInput" placeholder="Search users..." style="width:300px">
+    <a href="/users/form" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Add User</a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Name</th><th>Username</th><th>Role</th><th>Email</th><th>Status</th><th></th></tr>
+                </thead>
+                <tbody id="userList"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const ROLE_LABELS = { admin:'Admin', lab_manager:'Lab Manager', lab_tech:'Lab Technician', sample_collector:'Sample Collector', viewer:'Viewer' };
+
+    async function loadUsers() {
+        const data = await apiGet('/users/api');
+        if (!data) return;
+        const tbody = document.getElementById('userList');
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><p>No users</p></td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(u => `
+            <tr>
+                <td><strong>${u.first_name} ${u.last_name}</strong></td>
+                <td>${u.username}</td>
+                <td><span class="badge bg-primary">${ROLE_LABELS[u.role] || u.role}</span></td>
+                <td>${u.email || '-'}</td>
+                <td>${u.active ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Inactive</span>'}</td>
+                <td>
+                    <a href="/users/form/${u.id}" class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil"></i></a>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${u.id})"><i class="bi bi-trash"></i></button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    async function deleteUser(id) {
+        if (await confirmAction('Delete this user?')) {
+            const res = await apiDelete('/users/api/' + id);
+            if (res && res.ok) { showToast('User deleted'); loadUsers(); }
+        }
+    }
+
+    loadUsers();
+</script>
+{% endblock %}

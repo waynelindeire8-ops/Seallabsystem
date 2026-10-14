@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Clients - Lab Software{% endblock %}
+{% block page_title %}Clients{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <input type="text" class="form-control form-control-sm" id="searchInput" placeholder="Search clients..." style="width:300px">
+    <a href="/clients/form" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Add Client</a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Name</th><th>Contact Person</th><th>Phone</th><th>Email</th><th>Status</th><th></th></tr>
+                </thead>
+                <tbody id="clientList"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadClients() {
+        const data = await apiGet('/clients/api');
+        if (!data) return;
+        const tbody = document.getElementById('clientList');
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><p>No clients</p></td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(c => `
+            <tr>
+                <td><strong>${c.name}</strong></td>
+                <td>${c.contact_person || '-'}</td>
+                <td>${c.phone || '-'}</td>
+                <td>${c.email || '-'}</td>
+                <td>${c.active ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Inactive</span>'}</td>
+                <td>
+                    <a href="/clients/form/${c.id}" class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil"></i></a>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteClient(${c.id})"><i class="bi bi-trash"></i></button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    async function deleteClient(id) {
+        if (await confirmAction('Delete this client?')) {
+            const res = await apiDelete('/clients/api/' + id);
+            if (res && res.ok) { showToast('Client deleted'); loadClients(); }
+        }
+    }
+
+    loadClients();
+</script>
+{% endblock %}

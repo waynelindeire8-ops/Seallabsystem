@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Delivery Form - Seal MW Lab System{% endblock %}
+{% block page_title %}Add/Edit Delivery{% endblock %}
+{% block content %}
+<div class="row"><div class="col-lg-8"><div class="card"><div class="card-body">
+    <form id="itemForm"><div class="row g-3">
+        <div class="col-md-4"><label class="form-label">Client</label><select class="form-select" id="itemClient"><option value="">Select...</option></select></div>
+        <div class="col-md-4"><label class="form-label">Delivery Date</label><input type="date" class="form-control" id="itemDate"></div>
+        <div class="col-md-4"><label class="form-label">Status</label><select class="form-select" id="itemStatus"><option value="pending">Pending</option><option value="dispatched">Dispatched</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select></div>
+        <div class="col-md-6"><label class="form-label">Tracking Number</label><input type="text" class="form-control" id="itemTracking"></div>
+        <div class="col-12"><label class="form-label">Notes</label><textarea class="form-control" id="itemNotes" rows="2"></textarea></div>
+    </div><div class="mt-4 d-flex gap-2"><button type="submit" class="btn btn-primary">Save</button><a href="/deliveries" class="btn btn-secondary">Cancel</a></div></form>
+</div></div></div></div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    var pathParts = window.location.pathname.split('/');
+    var itemId = pathParts[pathParts.length - 1] !== 'form' ? pathParts[pathParts.length - 1] : null;
+    async function loadDropdowns() { var c = await apiGet('/patients/api'); var sel = document.getElementById('itemClient'); if (c) c.forEach(function(p) { sel.innerHTML += '<option value="' + p.id + '">' + p.name + '</option>'; }); }
+    async function loadItem() { if (!itemId) return; var d = await apiGet('/deliveries/api/' + itemId); if (d && d.delivery) { document.getElementById('itemClient').value = d.delivery.client_id || ''; document.getElementById('itemDate').value = d.delivery.delivery_date || ''; document.getElementById('itemStatus').value = d.delivery.status; document.getElementById('itemTracking').value = d.delivery.tracking_number || ''; document.getElementById('itemNotes').value = d.delivery.notes || ''; } }
+    document.getElementById('itemForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var payload = { client_id: document.getElementById('itemClient').value ? parseInt(document.getElementById('itemClient').value) : null, delivery_date: document.getElementById('itemDate').value, status: document.getElementById('itemStatus').value, tracking_number: document.getElementById('itemTracking').value.trim(), notes: document.getElementById('itemNotes').value.trim(), items: [] };
+        var res; if (itemId) { res = await apiPut('/deliveries/api/' + itemId, payload); } else { res = await apiPost('/deliveries/api', payload); }
+        if (res && res.ok) { showToast('Saved'); window.location.href = '/deliveries'; }
+    });
+    loadDropdowns(); loadItem();
+</script>
+{% endblock %}

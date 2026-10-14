@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Laboratory Tests - Seal MW Lab System{% endblock %}
+{% block page_title %}Laboratory Tests{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <input type="text" class="form-control form-control-sm" id="searchInput" placeholder="Search tests..." style="width:300px">
+    <a href="/lab-tests/form" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Add Test</a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead><tr><th>Name</th><th>Category</th><th>Specimen</th><th>Turnaround</th><th>Price</th><th>Status</th><th></th></tr></thead>
+                <tbody id="listData"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadData() {
+        var data = await apiGet('/lab-tests/api');
+        if (!data) return;
+        var tbody = document.getElementById('listData');
+        if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><p>No laboratory tests</p></td></tr>'; return; }
+        tbody.innerHTML = data.map(function(r) {
+            return '<tr><td><strong>' + r.name + '</strong></td><td>' + (r.category_name || '-') + '</td><td>' + (r.specimen_name || '-') + '</td><td>' + r.turnaround_hrs + ' hrs</td><td>' + (r.price ? 'MK ' + Number(r.price).toLocaleString() : 'Not priced') + '</td><td>' + (r.active ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Inactive</span>') + '</td><td><a href="/lab-tests/form/' + r.id + '" class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil"></i></a><button class="btn btn-sm btn-outline-danger" onclick="deleteItem(' + r.id + ')"><i class="bi bi-trash"></i></button></td></tr>';
+        }).join('');
+    }
+    async function deleteItem(id) { if (await confirmAction('Delete this test?')) { var res = await apiDelete('/lab-tests/api/' + id); if (res && res.ok) { showToast('Deleted'); loadData(); } } }
+    loadData();
+</script>
+{% endblock %}

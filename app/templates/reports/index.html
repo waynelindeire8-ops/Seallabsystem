@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Reports - Lab Software{% endblock %}
+{% block page_title %}Reports & Analytics{% endblock %}
+
+{% block content %}
+<div class="d-flex gap-2 mb-4">
+    <button class="btn btn-sm btn-primary period-btn active" data-period="week">Last 7 Days</button>
+    <button class="btn btn-sm btn-outline-primary period-btn" data-period="month">Last 30 Days</button>
+    <button class="btn btn-sm btn-outline-primary period-btn" data-period="year">Last 12 Months</button>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="bi bi-vials"></i></div>
+            <div class="stat-info"><h3 id="rptTotal">-</h3><p>Total Samples</p></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon green"><i class="bi bi-clock"></i></div>
+            <div class="stat-info"><h3 id="rptAvg">-</h3><p>Avg Turnaround (hrs)</p></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon orange"><i class="bi bi-pie-chart"></i></div>
+            <div class="stat-info"><h3 id="rptTypes">-</h3><p>Sample Types</p></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon purple"><i class="bi bi-building"></i></div>
+            <div class="stat-info"><h3 id="rptClients">-</h3><p>Active Clients</p></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-graph-up me-2"></i>Daily Volume</div>
+            <div class="card-body"><canvas id="dailyChart" height="120"></canvas></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-pie-chart me-2"></i>By Type</div>
+            <div class="card-body"><canvas id="typeChart" height="200"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-bar-chart me-2"></i>By Status</div>
+            <div class="card-body"><canvas id="statusChart" height="180"></canvas></div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-trophy me-2"></i>Top Clients</div>
+            <div class="card-body" id="topClients"><p class="text-muted">Loading...</p></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentPeriod = 'week';
+    let charts = {};
+
+    async function loadReport() {
+        const data = await apiGet('/reports/api/summary?period=' + currentPeriod);
+        if (!data) return;
+
+        document.getElementById('rptTotal').textContent = data.total;
+        document.getElementById('rptAvg').textContent = data.avg_turnaround;
+        document.getElementById('rptTypes').textContent = data.by_type.length;
+        document.getElementById('rptClients').textContent = data.top_clients.length;
+
+        Object.values(charts).forEach(c => c.destroy());
+        charts = {};
+
+        if (data.daily.length > 0) {
+            charts.daily = new Chart(document.getElementById('dailyChart'), {
+                type: 'line',
+                data: {
+                    labels: data.daily.map(d => d.day),
+                    datasets: [{ label: 'Samples', data: data.daily.map(d => d.count), borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.1)', fill: true, tension: 0.3, pointRadius: 4 }]
+                },
+                options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        if (data.by_type.length > 0) {
+            charts.type = new Chart(document.getElementById('typeChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: data.by_type.map(t => t.name),
+                    datasets: [{ data: data.by_type.map(t => t.count), backgroundColor: ['#2563eb','#16a34a','#ea580c','#9333ea','#0d9488','#dc2626','#eab308'] }]
+                },
+                options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } } }
+            });
+        }
+
+        if (data.by_status.length > 0) {
+            charts.status = new Chart(document.getElementById('statusChart'), {
+                type: 'bar',
+                data: {
+                    labels: data.by_status.map(s => s.status),
+                    datasets: [{ data: data.by_status.map(s => s.count), backgroundColor: ['#2563eb','#0d9488','#eab308','#9333ea','#16a34a','#0f172a','#dc2626'] }]
+                },
+                options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        const clientsDiv = document.getElementById('topClients');
+        if (data.top_clients.length > 0) {
+            clientsDiv.innerHTML = data.top_clients.map((c, i) => `
+                <div class="d-flex justify-content-between align-items-center py-2 ${i < data.top_clients.length - 1 ? 'border-bottom' : ''}">
+                    <div><strong>#${i+1}</strong> ${c.name}</div>
+                    <span class="badge bg-primary">${c.count} samples</span>
+                </div>
+            `).join('');
+        } else {
+            clientsDiv.innerHTML = '<p class="text-muted">No client data</p>';
+        }
+    }
+
+    document.querySelectorAll('.period-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.period-btn').forEach(b => { b.classList.remove('active', 'btn-primary'); b.classList.add('btn-outline-primary'); });
+            this.classList.add('active', 'btn-primary');
+            this.classList.remove('btn-outline-primary');
+            currentPeriod = this.dataset.period;
+            loadReport();
+        });
+    });
+
+    loadReport();
+</script>
+{% endblock %}

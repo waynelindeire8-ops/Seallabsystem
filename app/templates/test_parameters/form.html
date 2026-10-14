@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Test Parameter Form - Seal MW Lab System{% endblock %}
+{% block page_title %}Add/Edit Test Parameter{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form id="itemForm">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Parameter Name *</label>
+                            <input type="text" class="form-control" id="itemName" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Laboratory Test *</label>
+                            <select class="form-select" id="itemTest" required><option value="">Select test...</option></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Unit</label>
+                            <input type="text" class="form-control" id="itemUnit">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Ref Min</label>
+                            <input type="number" step="any" class="form-control" id="itemRefMin">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Ref Max</label>
+                            <input type="number" step="any" class="form-control" id="itemRefMax">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Decimal Places</label>
+                            <input type="number" class="form-control" id="itemDecimal" value="1">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Active</label>
+                            <select class="form-select" id="itemActive"><option value="1">Yes</option><option value="0">No</option></select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Reference Text</label>
+                            <input type="text" class="form-control" id="itemRefText" placeholder="e.g. 4.5-11.0">
+                        </div>
+                    </div>
+                    <div class="mt-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Save</button>
+                        <a href="/test-parameters" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    var pathParts = window.location.pathname.split('/');
+    var itemId = pathParts[pathParts.length - 1] !== 'form' ? pathParts[pathParts.length - 1] : null;
+    async function loadDropdowns() {
+        var tests = await apiGet('/lab-tests/api');
+        var sel = document.getElementById('itemTest');
+        if (tests) tests.forEach(function(t) { sel.innerHTML += '<option value="' + t.id + '">' + t.name + '</option>'; });
+    }
+    async function loadItem() { if (!itemId) return; var d = await apiGet('/test-parameters/api/' + itemId); if (d) { document.getElementById('itemName').value = d.name; document.getElementById('itemTest').value = d.test_id; document.getElementById('itemUnit').value = d.unit || ''; document.getElementById('itemRefMin').value = d.ref_min != null ? d.ref_min : ''; document.getElementById('itemRefMax').value = d.ref_max != null ? d.ref_max : ''; document.getElementById('itemDecimal').value = d.decimal_places; document.getElementById('itemActive').value = d.active; document.getElementById('itemRefText').value = d.reference_text || ''; } }
+    document.getElementById('itemForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var payload = { name: document.getElementById('itemName').value.trim(), test_id: parseInt(document.getElementById('itemTest').value), unit: document.getElementById('itemUnit').value.trim(), ref_min: document.getElementById('itemRefMin').value ? parseFloat(document.getElementById('itemRefMin').value) : null, ref_max: document.getElementById('itemRefMax').value ? parseFloat(document.getElementById('itemRefMax').value) : null, decimal_places: parseInt(document.getElementById('itemDecimal').value), reference_text: document.getElementById('itemRefText').value.trim(), active: parseInt(document.getElementById('itemActive').value) };
+        var res; if (itemId) { res = await apiPut('/test-parameters/api/' + itemId, payload); } else { res = await apiPost('/test-parameters/api', payload); }
+        if (res && res.ok) { showToast('Saved'); window.location.href = '/test-parameters'; }
+    });
+    loadDropdowns(); loadItem();
+</script>
+{% endblock %}

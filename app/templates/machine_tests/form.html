@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Machine Test Form - Seal MW Lab System{% endblock %}
+{% block page_title %}Add/Edit Machine{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form id="itemForm">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Machine Name *</label>
+                            <input type="text" class="form-control" id="itemName" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" id="itemStatus"><option value="active">Active</option><option value="maintenance">Maintenance</option><option value="inactive">Inactive</option></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Machine Code</label>
+                            <input type="text" class="form-control" id="itemCode">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Test</label>
+                            <select class="form-select" id="itemTest"><option value="">Select test...</option></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Manufacturer</label>
+                            <input type="text" class="form-control" id="itemMfr">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Model</label>
+                            <input type="text" class="form-control" id="itemModel">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Calibration Date</label>
+                            <input type="date" class="form-control" id="itemCalDate">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Next Calibration</label>
+                            <input type="date" class="form-control" id="itemNextCal">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Notes</label>
+                            <textarea class="form-control" id="itemNotes" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="mt-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Save</button>
+                        <a href="/machine-tests" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    var pathParts = window.location.pathname.split('/');
+    var itemId = pathParts[pathParts.length - 1] !== 'form' ? pathParts[pathParts.length - 1] : null;
+    async function loadDropdowns() {
+        var tests = await apiGet('/lab-tests/api');
+        var sel = document.getElementById('itemTest');
+        if (tests) tests.forEach(function(t) { sel.innerHTML += '<option value="' + t.id + '">' + t.name + '</option>'; });
+    }
+    async function loadItem() { if (!itemId) return; var d = await apiGet('/machine-tests/api/' + itemId); if (d) { document.getElementById('itemName').value = d.machine_name; document.getElementById('itemCode').value = d.machine_code || ''; document.getElementById('itemTest').value = d.test_id || ''; document.getElementById('itemMfr').value = d.manufacturer || ''; document.getElementById('itemModel').value = d.model || ''; document.getElementById('itemCalDate').value = d.calibration_date || ''; document.getElementById('itemNextCal').value = d.next_calibration || ''; document.getElementById('itemStatus').value = d.status; document.getElementById('itemNotes').value = d.notes || ''; } }
+    document.getElementById('itemForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var payload = { machine_name: document.getElementById('itemName').value.trim(), machine_code: document.getElementById('itemCode').value.trim(), test_id: document.getElementById('itemTest').value ? parseInt(document.getElementById('itemTest').value) : null, manufacturer: document.getElementById('itemMfr').value.trim(), model: document.getElementById('itemModel').value.trim(), calibration_date: document.getElementById('itemCalDate').value || null, next_calibration: document.getElementById('itemNextCal').value || null, status: document.getElementById('itemStatus').value, notes: document.getElementById('itemNotes').value.trim() };
+        var res; if (itemId) { res = await apiPut('/machine-tests/api/' + itemId, payload); } else { res = await apiPost('/machine-tests/api', payload); }
+        if (res && res.ok) { showToast('Saved'); window.location.href = '/machine-tests'; }
+    });
+    loadDropdowns(); loadItem();
+</script>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Sale Form - Seal MW Lab System{% endblock %}
+{% block page_title %}Add/Edit Sale{% endblock %}
+{% block content %}
+<div class="row"><div class="col-lg-8"><div class="card"><div class="card-body">
+    <form id="itemForm"><div class="row g-3">
+        <div class="col-md-4"><label class="form-label">Client</label><select class="form-select" id="itemClient"><option value="">Select...</option></select></div>
+        <div class="col-md-4"><label class="form-label">Date</label><input type="date" class="form-control" id="itemDate"></div>
+        <div class="col-md-4"><label class="form-label">Status</label><select class="form-select" id="itemStatus"><option value="pending">Pending</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></div>
+        <div class="col-12"><label class="form-label">Notes</label><textarea class="form-control" id="itemNotes" rows="2"></textarea></div>
+    </div><div class="mt-4 d-flex gap-2"><button type="submit" class="btn btn-primary">Save</button><a href="/sales" class="btn btn-secondary">Cancel</a></div></form>
+</div></div></div></div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    var pathParts = window.location.pathname.split('/');
+    var itemId = pathParts[pathParts.length - 1] !== 'form' ? pathParts[pathParts.length - 1] : null;
+    async function loadDropdowns() { var c = await apiGet('/patients/api'); var sel = document.getElementById('itemClient'); if (c) c.forEach(function(p) { sel.innerHTML += '<option value="' + p.id + '">' + p.name + '</option>'; }); }
+    async function loadItem() { if (!itemId) return; var d = await apiGet('/sales/api/' + itemId); if (d && d.sale) { document.getElementById('itemClient').value = d.sale.client_id || ''; document.getElementById('itemDate').value = d.sale.sale_date || ''; document.getElementById('itemStatus').value = d.sale.status; document.getElementById('itemNotes').value = d.sale.notes || ''; } }
+    document.getElementById('itemForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var payload = { client_id: document.getElementById('itemClient').value ? parseInt(document.getElementById('itemClient').value) : null, sale_date: document.getElementById('itemDate').value, status: document.getElementById('itemStatus').value, notes: document.getElementById('itemNotes').value.trim(), subtotal: 0, tax: 0, total: 0, items: [] };
+        var res; if (itemId) { res = await apiPut('/sales/api/' + itemId, payload); } else { res = await apiPost('/sales/api', payload); }
+        if (res && res.ok) { showToast('Saved'); window.location.href = '/sales'; }
+    });
+    loadDropdowns(); loadItem();
+</script>
+{% endblock %}

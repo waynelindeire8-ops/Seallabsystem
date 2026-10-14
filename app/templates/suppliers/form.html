@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Supplier Form - Seal MW Lab System{% endblock %}
+{% block page_title %}Add/Edit Supplier{% endblock %}
+{% block content %}
+<div class="row"><div class="col-lg-8"><div class="card"><div class="card-body">
+    <form id="itemForm"><div class="row g-3">
+        <div class="col-md-8"><label class="form-label">Name *</label><input type="text" class="form-control" id="itemName" required></div>
+        <div class="col-md-4"><label class="form-label">Active</label><select class="form-select" id="itemActive"><option value="1">Yes</option><option value="0">No</option></select></div>
+        <div class="col-md-6"><label class="form-label">Contact Person</label><input type="text" class="form-control" id="itemContact"></div>
+        <div class="col-md-6"><label class="form-label">Phone</label><input type="text" class="form-control" id="itemPhone"></div>
+        <div class="col-md-6"><label class="form-label">Email</label><input type="email" class="form-control" id="itemEmail"></div>
+        <div class="col-12"><label class="form-label">Address</label><textarea class="form-control" id="itemAddress" rows="2"></textarea></div>
+    </div><div class="mt-4 d-flex gap-2"><button type="submit" class="btn btn-primary">Save</button><a href="/suppliers" class="btn btn-secondary">Cancel</a></div></form>
+</div></div></div></div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    var pathParts = window.location.pathname.split('/');
+    var itemId = pathParts[pathParts.length - 1] !== 'form' ? pathParts[pathParts.length - 1] : null;
+    async function loadItem() { if (!itemId) return; var d = await apiGet('/suppliers/api/' + itemId); if (d) { document.getElementById('itemName').value = d.name; document.getElementById('itemContact').value = d.contact_person || ''; document.getElementById('itemPhone').value = d.phone || ''; document.getElementById('itemEmail').value = d.email || ''; document.getElementById('itemAddress').value = d.address || ''; document.getElementById('itemActive').value = d.active; } }
+    document.getElementById('itemForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var payload = { name: document.getElementById('itemName').value.trim(), contact_person: document.getElementById('itemContact').value.trim(), phone: document.getElementById('itemPhone').value.trim(), email: document.getElementById('itemEmail').value.trim(), address: document.getElementById('itemAddress').value.trim(), active: parseInt(document.getElementById('itemActive').value) };
+        var res; if (itemId) { res = await apiPut('/suppliers/api/' + itemId, payload); } else { res = await apiPost('/suppliers/api', payload); }
+        if (res && res.ok) { showToast('Saved'); window.location.href = '/suppliers'; }
+    });
+    loadItem();
+</script>
+{% endblock %}

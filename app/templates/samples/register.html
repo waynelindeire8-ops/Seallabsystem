@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Register Sample - Lab Software{% endblock %}
+{% block page_title %}Register New Sample{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header"><i class="bi bi-person me-2"></i>Patient Information</div>
+            <div class="card-body">
+                <form id="registerForm">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Patient Name *</label>
+                            <input type="text" class="form-control" id="patientName" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Date of Birth</label>
+                            <input type="date" class="form-control" id="patientDob">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Gender</label>
+                            <select class="form-select" id="patientGender">
+                                <option value="">Select</option>
+                                <option value="M">Male</option>
+                                <option value="F">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header"><i class="bi bi-vials me-2"></i>Sample Details</div>
+            <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Sample Type *</label>
+                            <select class="form-select" id="sampleType" required>
+                                <option value="">Select type...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Priority *</label>
+                            <select class="form-select" id="priority" required>
+                                <option value="routine">Routine</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Client / Referred By</label>
+                            <select class="form-select" id="clientId">
+                                <option value="">Walk-in</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Estimated Turnaround (hours)</label>
+                            <input type="number" class="form-control" id="turnaround" min="1" value="24">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" rows="2"></textarea>
+                        </div>
+                    </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header"><i class="bi bi-journal-text me-2"></i>Select Tests</div>
+            <div class="card-body">
+                <div id="testList" class="row g-2"></div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-lg me-1"></i>Register Sample
+            </button>
+            <a href="/samples" class="btn btn-secondary">Cancel</a>
+        </div>
+                </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let allTests = [];
+
+    async function loadDropdowns() {
+        const types = await apiGet('/samples/api/types');
+        const clients = await apiGet('/samples/api/clients');
+        const catalog = await apiGet('/samples/api/catalog');
+
+        const typeSelect = document.getElementById('sampleType');
+        if (types) types.forEach(t => {
+            typeSelect.innerHTML += `<option value="${t.id}">${t.name}</option>`;
+        });
+
+        const clientSelect = document.getElementById('clientId');
+        if (clients) clients.forEach(c => {
+            clientSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+        });
+
+        if (catalog) {
+            allTests = catalog;
+            const grouped = {};
+            catalog.forEach(t => {
+                if (!grouped[t.category]) grouped[t.category] = [];
+                grouped[t.category].push(t);
+            });
+            const testDiv = document.getElementById('testList');
+            for (const [cat, tests] of Object.entries(grouped)) {
+                testDiv.innerHTML += `<div class="col-12"><strong class="text-muted text-uppercase" style="font-size:12px">${cat}</strong></div>`;
+                tests.forEach(t => {
+                    testDiv.innerHTML += `
+                        <div class="col-md-6 col-lg-4">
+                            <div class="form-check">
+                                <input class="form-check-input test-check" type="checkbox" value="${t.id}" id="test_${t.id}">
+                                <label class="form-check-label" for="test_${t.id}">
+                                    ${t.name} <small class="text-muted">(${t.price > 0 ? 'MK ' + Number(t.price).toLocaleString() : 'Not priced'})</small>
+                                </label>
+                            </div>
+                        </div>`;
+                });
+            }
+        }
+    }
+
+    document.getElementById('registerForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const testIds = Array.from(document.querySelectorAll('.test-check:checked')).map(c => parseInt(c.value));
+
+        const payload = {
+            patient_name: document.getElementById('patientName').value.trim(),
+            patient_dob: document.getElementById('patientDob').value || null,
+            patient_gender: document.getElementById('patientGender').value,
+            sample_type_id: parseInt(document.getElementById('sampleType').value),
+            priority: document.getElementById('priority').value,
+            client_id: document.getElementById('clientId').value ? parseInt(document.getElementById('clientId').value) : null,
+            estimated_turnaround: parseInt(document.getElementById('turnaround').value) || 24,
+            notes: document.getElementById('notes').value.trim(),
+            test_ids: testIds
+        };
+
+        const res = await apiPost('/samples/api', payload);
+        if (res && res.ok) {
+            showToast('Sample registered: ' + res.data.sample_code);
+            window.location.href = '/samples/' + res.data.id;
+        } else {
+            showToast(res?.data?.error || 'Failed to register sample', 'danger');
+        }
+    });
+
+    loadDropdowns();
+</script>
+{% endblock %}

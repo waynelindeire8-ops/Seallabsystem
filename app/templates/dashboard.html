@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Lab Software{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_heading %}Dashboard{% endblock %}
+{% block page_subtitle %}<span class="heading-divider">»</span><span class="heading-subtitle">overview &amp; stats</span>{% endblock %}
+
+{% block content %}
+<section class="dashboard-layout" aria-label="Dashboard overview">
+    <div class="dashboard-left">
+        <div class="metric-grid">
+            <article class="metric-card">
+                <div class="metric-icon metric-green"><i class="bi bi-chat-text-fill"></i></div>
+                <div class="metric-copy"><div class="metric-number metric-number-green" id="statTotalTests">0</div><div class="metric-label">Total Tests</div></div>
+            </article>
+            <article class="metric-card">
+                <div class="metric-icon metric-blue"><i class="bi bi-buildings-fill"></i></div>
+                <div class="metric-copy"><div class="metric-number metric-number-blue" id="statClinics">0</div><div class="metric-label">Clinics</div></div>
+            </article>
+            <article class="metric-card">
+                <div class="metric-icon metric-purple"><i class="bi bi-cart-fill"></i></div>
+                <div class="metric-copy"><div class="metric-number metric-number-purple" id="statTestParams">0</div><div class="metric-label">Test Parameters</div></div>
+            </article>
+            <article class="metric-card">
+                <div class="metric-icon metric-red"><i class="bi bi-beaker-fill"></i></div>
+                <div class="metric-copy"><div class="metric-number metric-number-red" id="statSpecimens">0</div><div class="metric-label">Specimen</div></div>
+            </article>
+            <article class="metric-card">
+                <div class="metric-icon metric-orange metric-bars"><i class="bi bi-bar-chart-fill"></i></div>
+                <div class="metric-copy"><div class="metric-number metric-number-orange" id="statPatients">0</div><div class="metric-label">Patients</div></div>
+            </article>
+            <article class="metric-card metric-product-card">
+                <div class="product-ring"><span id="statProducts">0</span></div>
+                <div class="metric-copy"><div class="metric-label product-label">Products</div><div class="metric-caption">active test catalog</div></div>
+            </article>
+        </div>
+
+    </div>
+
+    <section class="reference-card recent-patients-panel">
+        <div class="reference-card-header"><i class="bi bi-people-fill"></i><span>Recent Patients</span><a href="/samples" class="panel-link">View all</a></div>
+        <div class="recent-patients-table-wrap">
+            <table class="recent-patients-table">
+                <thead>
+                    <tr><th class="check-column"></th><th>Name</th><th>Date</th></tr>
+                </thead>
+                <tbody id="recentPatientsTable">
+                    <tr><td colspan="3" class="table-loading">Loading patients…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function patientDate(value) {
+        if (!value) return '<span class="muted-dash">-</span>';
+        const dt = new Date(value);
+        const date = dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'long' });
+        const time = dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        return `<div>${date}</div><div class="patient-time">${time}</div>`;
+    }
+
+    function setMetric(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = Number(value || 0).toLocaleString();
+    }
+
+    async function loadDashboard() {
+        const data = await apiGet('/dashboard/api/stats');
+        if (!data) return;
+
+        setMetric('statTotalTests', data.total_tests ?? data.total);
+        setMetric('statClinics', data.clinics);
+        setMetric('statTestParams', data.test_parameters);
+        setMetric('statSpecimens', data.specimens);
+        setMetric('statPatients', data.patients);
+        setMetric('statProducts', data.products);
+
+        const tbody = document.getElementById('recentPatientsTable');
+        if (!data.recent || data.recent.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="table-empty">No patients yet</td></tr>';
+        } else {
+            tbody.innerHTML = data.recent.map(patient => `
+                <tr class="patient-row" onclick="window.location='/samples/${patient.id}'">
+                    <td class="check-column"><i class="bi bi-check-circle-fill patient-check"></i></td>
+                    <td><span class="patient-name">${patient.patient_name || 'Unnamed patient'}</span><span class="patient-meta">${patient.sample_code || ''}</span></td>
+                    <td class="patient-date">${patientDate(patient.created_at)}</td>
+                </tr>
+            `).join('');
+        }
+
+    }
+
+    loadDashboard();
+</script>
+{% endblock %}

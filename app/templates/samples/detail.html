@@ -1,0 +1,356 @@
+{% extends "base.html" %}
+{% block title %}Sample Detail - Lab Software{% endblock %}
+{% block page_title %}Sample Detail{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-0" id="sampleCode">Loading...</h4>
+        <small class="text-muted" id="sampleDate"></small>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary btn-sm" onclick="printReport()"><i class="bi bi-printer me-1"></i>Print</button>
+        <a href="/samples" class="btn btn-secondary btn-sm">Back to List</a>
+    </div>
+</div>
+
+<div class="workflow-steps mb-4" id="workflowSteps"></div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-info-circle me-2"></i>Sample Information</span>
+                <button class="btn btn-sm btn-outline-secondary" onclick="editSample()"><i class="bi bi-pencil"></i></button>
+            </div>
+            <div class="card-body">
+                <div class="row g-3" id="sampleInfo"></div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-journal-check me-2"></i>Test Results</span>
+                <button class="btn btn-sm btn-outline-primary" onclick="addTest()"><i class="bi bi-plus-lg me-1"></i>Add Test</button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Test</th>
+                                <th>Result</th>
+                                <th>Unit</th>
+                                <th>Reference</th>
+                                <th>Status</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="testResults"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><i class="bi bi-clock-history me-2"></i>Audit Trail</div>
+            <div class="card-body">
+                <div id="auditLog"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header"><i class="bi bi-arrow-right-circle me-2"></i>Actions</div>
+            <div class="card-body" id="actionButtons"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><i class="bi bi-chat-dots me-2"></i>Notes</div>
+            <div class="card-body">
+                <p id="sampleNotes" class="text-muted mb-3">No notes</p>
+                <textarea class="form-control" id="newNote" rows="3" placeholder="Add a note..."></textarea>
+                <button class="btn btn-sm btn-primary mt-2" onclick="saveNote()">Save Note</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addTestModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Add Test</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <select class="form-select" id="addTestSelect"></select>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmAddTest()">Add</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editTestModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Edit Test Result</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <input type="hidden" id="editTestId">
+                <div class="mb-3">
+                    <label class="form-label">Result</label>
+                    <input type="text" class="form-control" id="editTestResult">
+                </div>
+                <div class="row g-3">
+                    <div class="col-6">
+                        <label class="form-label">Unit</label>
+                        <input type="text" class="form-control" id="editTestUnit">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="editTestStatus">
+                            <option value="pending">Pending</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-control" id="editTestNotes" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" onclick="saveTestResult()">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="transitionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title" id="transitionTitle">Transition</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Notes (optional)</label>
+                    <textarea class="form-control" id="transitionNotes" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="transitionConfirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const sampleId = window.location.pathname.split('/').pop();
+    let sampleData = null;
+    let allCatalog = [];
+
+    const STAGES = ['registered','triaged','analysis','review','approved','reported'];
+    const STAGE_LABELS = { registered:'Register', triaged:'Triage', analysis:'Analysis', review:'Review', approved:'Approve', reported:'Report' };
+
+    async function loadSample() {
+        const res = await apiGet('/samples/api/' + sampleId);
+        if (!res || res.error) { window.location.href = '/samples'; return; }
+
+        sampleData = res;
+        const s = res.sample;
+        document.getElementById('sampleCode').textContent = s.sample_code;
+        document.getElementById('sampleDate').textContent = 'Registered: ' + formatDateTime(s.created_at);
+        document.title = s.sample_code + ' - Lab Software';
+
+        renderWorkflow(s.status, s.cancelled_reason);
+        renderInfo(s);
+        renderTests(res.tests);
+        renderLog(res.log);
+        renderActions(s);
+        document.getElementById('sampleNotes').textContent = s.notes || 'No notes';
+        document.getElementById('newNote').value = s.notes || '';
+
+        allCatalog = await apiGet('/samples/api/catalog') || [];
+    }
+
+    function renderWorkflow(status, cancelled) {
+        const div = document.getElementById('workflowSteps');
+        if (status === 'cancelled') {
+            div.innerHTML = `<div class="workflow-step cancelled"><span class="step-num"><i class="bi bi-x"></i></span> Cancelled</div>`;
+            return;
+        }
+        const idx = STAGES.indexOf(status);
+        div.innerHTML = STAGES.map((st, i) => {
+            let cls = i < idx ? 'completed' : i === idx ? 'current' : '';
+            return (i > 0 ? '<span class="workflow-arrow"><i class="bi bi-chevron-right"></i></span>' : '') +
+                   `<div class="workflow-step ${cls}"><span class="step-num">${i < idx ? '<i class="bi bi-check"></i>' : (i+1)}</span> ${STAGE_LABELS[st]}</div>`;
+        }).join('');
+    }
+
+    function renderInfo(s) {
+        document.getElementById('sampleInfo').innerHTML = `
+            <div class="col-md-3"><small class="text-muted d-block">Patient Name</small><strong>${s.patient_name}</strong></div>
+            <div class="col-md-3"><small class="text-muted d-block">DOB</small>${s.patient_dob || '-'}</div>
+            <div class="col-md-3"><small class="text-muted d-block">Gender</small>${s.patient_gender || '-'}</div>
+            <div class="col-md-3"><small class="text-muted d-block">Priority</small>${priorityBadge(s.priority)}</div>
+            <div class="col-md-3"><small class="text-muted d-block">Sample Type</small><strong>${s.type_name || '-'}</strong></div>
+            <div class="col-md-3"><small class="text-muted d-block">Client</small>${s.client_name || 'Walk-in'}</div>
+            <div class="col-md-3"><small class="text-muted d-block">Status</small>${statusBadge(s.status)}</div>
+            <div class="col-md-3"><small class="text-muted d-block">Est. Turnaround</small>${s.estimated_turnaround ? s.estimated_turnaround + ' hrs' : '-'}</div>
+        `;
+    }
+
+    function renderTests(tests) {
+        const tbody = document.getElementById('testResults');
+        if (tests.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-state py-3"><p>No tests assigned</p></td></tr>';
+            return;
+        }
+        tbody.innerHTML = tests.map(t => `
+            <tr>
+                <td><strong>${t.test_name}</strong></td>
+                <td>${t.result ? '<span class="' + (t.flagged ? 'text-danger fw-bold' : '') + '">' + t.result + '</span>' : '<span class="text-muted">-</span>'}</td>
+                <td>${t.unit || t.test_unit || '-'}</td>
+                <td><small>${t.reference_range || t.reference_text || '-'}</small></td>
+                <td>${statusBadge(t.status)}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="editTest(${t.id}, '${(t.result||'').replace(/'/g,"\\'")}', '${(t.unit||'').replace(/'/g,"\\'")}', '${t.status}', '${(t.notes||'').replace(/'/g,"\\'")}')"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteTest(${t.id})"><i class="bi bi-trash"></i></button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function renderLog(log) {
+        const div = document.getElementById('auditLog');
+        if (log.length === 0) { div.innerHTML = '<p class="text-muted">No activity yet</p>'; return; }
+        div.innerHTML = log.map(l => `
+            <div class="d-flex gap-3 mb-3">
+                <div class="avatar-sm" style="width:32px;height:32px;font-size:12px;flex-shrink:0">${(l.username||'?').charAt(0).toUpperCase()}</div>
+                <div>
+                    <div><strong>${l.username || 'System'}</strong> moved to <span class="badge bg-primary">${l.to_status}</span></div>
+                    <small class="text-muted">${formatDateTime(l.created_at)}${l.notes ? ' - ' + l.notes : ''}</small>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function renderActions(s) {
+        const user = getUser();
+        const div = document.getElementById('actionButtons');
+        const btns = [];
+        const transitions = {
+            'registered': { next: 'triaged', label: 'Triage Sample', icon: 'bi-clipboard-check', roles: ['admin','lab_manager','lab_tech','sample_collector'] },
+            'triaged': { next: 'analysis', label: 'Start Analysis', icon: 'bi-search', roles: ['admin','lab_manager','lab_tech'] },
+            'analysis': { next: 'review', label: 'Submit for Review', icon: 'bi-send', roles: ['admin','lab_manager','lab_tech'] },
+            'review': { next: 'approved', label: 'Approve Results', icon: 'bi-check-circle', roles: ['admin','lab_manager'] },
+            'approved': { next: 'reported', label: 'Generate Report', icon: 'bi-file-earmark-text', roles: ['admin','lab_manager','lab_tech'] },
+        };
+
+        if (transitions[s.status] && transitions[s.status].roles.includes(user.role)) {
+            const t = transitions[s.status];
+            btns.push(`<button class="btn btn-primary w-100 mb-2" onclick="doTransition('${t.next}', '${t.label}')"><i class="bi ${t.icon} me-1"></i>${t.label}</button>`);
+        }
+
+        if (s.status !== 'cancelled' && s.status !== 'reported') {
+            const cancelRoles = ['admin', 'lab_manager'];
+            if (cancelRoles.includes(user.role)) {
+                btns.push(`<button class="btn btn-outline-danger w-100 mb-2" onclick="doTransition('cancelled', 'Cancel Sample')"><i class="bi bi-x-circle me-1"></i>Cancel Sample</button>`);
+            }
+        }
+
+        if (s.status === 'reported') {
+            btns.push(`<a href="/samples/${s.id}/report" class="btn btn-success w-100 mb-2"><i class="bi bi-file-earmark-pdf me-1"></i>View Report</a>`);
+        }
+
+        div.innerHTML = btns.length > 0 ? btns.join('') : '<p class="text-muted text-center">No actions available</p>';
+    }
+
+    function doTransition(status, label) {
+        document.getElementById('transitionTitle').textContent = label;
+        document.getElementById('transitionNotes').value = '';
+        const modal = new bootstrap.Modal(document.getElementById('transitionModal'));
+        modal.show();
+        document.getElementById('transitionConfirm').onclick = async function() {
+            const res = await apiPost('/samples/api/' + sampleId + '/transition', {
+                status: status,
+                notes: document.getElementById('transitionNotes').value.trim()
+            });
+            if (res && res.ok) {
+                modal.hide();
+                showToast(res.data.message);
+                loadSample();
+            } else {
+                showToast(res?.data?.error || 'Failed', 'danger');
+            }
+        };
+    }
+
+    function addTest() {
+        const select = document.getElementById('addTestSelect');
+        select.innerHTML = allCatalog.map(t => `<option value="${t.id}">${t.name} (${t.category})</option>`).join('');
+        new bootstrap.Modal(document.getElementById('addTestModal')).show();
+    }
+
+    async function confirmAddTest() {
+        const testId = parseInt(document.getElementById('addTestSelect').value);
+        const res = await apiPost('/samples/api/' + sampleId + '/test', { test_catalog_id: testId });
+        if (res && res.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('addTestModal')).hide();
+            showToast('Test added');
+            loadSample();
+        }
+    }
+
+    function editTest(id, result, unit, status, notes) {
+        document.getElementById('editTestId').value = id;
+        document.getElementById('editTestResult').value = result;
+        document.getElementById('editTestUnit').value = unit;
+        document.getElementById('editTestStatus').value = status;
+        document.getElementById('editTestNotes').value = notes;
+        new bootstrap.Modal(document.getElementById('editTestModal')).show();
+    }
+
+    async function saveTestResult() {
+        const id = document.getElementById('editTestId').value;
+        const res = await apiPut(`/samples/api/${sampleId}/test/${id}`, {
+            result: document.getElementById('editTestResult').value.trim(),
+            unit: document.getElementById('editTestUnit').value.trim(),
+            status: document.getElementById('editTestStatus').value,
+            notes: document.getElementById('editTestNotes').value.trim()
+        });
+        if (res && res.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('editTestModal')).hide();
+            showToast('Test updated');
+            loadSample();
+        }
+    }
+
+    async function deleteTest(testId) {
+        if (await confirmAction('Remove this test?')) {
+            const res = await apiDelete(`/samples/api/${sampleId}/test/${testId}`);
+            if (res && res.ok) { showToast('Test removed'); loadSample(); }
+        }
+    }
+
+    async function saveNote() {
+        const res = await apiPut('/samples/api/' + sampleId, { notes: document.getElementById('newNote').value.trim() });
+        if (res && res.ok) { showToast('Note saved'); document.getElementById('sampleNotes').textContent = document.getElementById('newNote').value.trim() || 'No notes'; }
+    }
+
+    function editSample() {
+        showToast('Edit functionality - coming soon', 'info');
+    }
+
+    function printReport() {
+        window.location.href = '/samples/' + sampleId + '/report';
+    }
+
+    loadSample();
+</script>
+{% endblock %}

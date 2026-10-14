@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Sample Type Form - Lab Software{% endblock %}
+{% block page_title %}Add/Edit Sample Type{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form id="typeForm">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Type Name *</label>
+                            <input type="text" class="form-control" id="typeName" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Storage Requirements</label>
+                            <input type="text" class="form-control" id="typeStorage" placeholder="e.g. Refrigerate 2-8C">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Shelf Life (hours)</label>
+                            <input type="number" class="form-control" id="typeShelf" value="24">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Active</label>
+                            <select class="form-select" id="typeActive">
+                                <option value="1">Yes</option>
+                                <option value="0">No</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Instructions</label>
+                            <textarea class="form-control" id="typeInstructions" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="mt-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Save</button>
+                        <a href="/sample-types" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const pathParts = window.location.pathname.split('/');
+    const typeId = pathParts[pathParts.length - 1] !== 'form' ? pathParts[pathParts.length - 1] : null;
+
+    async function loadType() {
+        if (!typeId) return;
+        const data = await apiGet('/sample-types/api/' + typeId);
+        if (!data) return;
+        document.getElementById('typeName').value = data.name;
+        document.getElementById('typeStorage').value = data.storage_req || '';
+        document.getElementById('typeShelf').value = data.shelf_life_hrs;
+        document.getElementById('typeInstructions').value = data.instructions || '';
+        document.getElementById('typeActive').value = data.active;
+    }
+
+    document.getElementById('typeForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const payload = {
+            name: document.getElementById('typeName').value.trim(),
+            storage_req: document.getElementById('typeStorage').value.trim(),
+            shelf_life_hrs: parseInt(document.getElementById('typeShelf').value),
+            instructions: document.getElementById('typeInstructions').value.trim(),
+            active: parseInt(document.getElementById('typeActive').value)
+        };
+
+        let res;
+        if (typeId) { res = await apiPut('/sample-types/api/' + typeId, payload); }
+        else { res = await apiPost('/sample-types/api', payload); }
+        if (res && res.ok) { showToast('Saved'); window.location.href = '/sample-types'; }
+    });
+
+    loadType();
+</script>
+{% endblock %}

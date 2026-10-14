@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Invoices - Seal MW Lab System{% endblock %}
+{% block page_title %}Invoices{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <input type="text" class="form-control form-control-sm" id="searchInput" placeholder="Search invoices..." style="width:300px">
+    <a href="/invoices/form" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>New Invoice</a>
+</div>
+<div class="card"><div class="card-body p-0"><div class="table-responsive">
+    <table class="table table-hover mb-0">
+        <thead><tr><th>Code</th><th>Client</th><th>Date</th><th>Due Date</th><th>Total</th><th>Status</th><th></th></tr></thead>
+        <tbody id="listData"></tbody>
+    </table>
+</div></div></div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    async function loadData() {
+        var data = await apiGet('/invoices/api');
+        if (!data) return;
+        var tbody = document.getElementById('listData');
+        if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><p>No invoices</p></td></tr>'; return; }
+        tbody.innerHTML = data.map(function(r) {
+            var st = r.status === 'paid' ? '<span class="badge bg-success">Paid</span>' : r.status === 'overdue' ? '<span class="badge bg-danger">Overdue</span>' : r.status === 'cancelled' ? '<span class="badge bg-secondary">Cancelled</span>' : '<span class="badge bg-warning text-dark">Pending</span>';
+            return '<tr><td><strong>' + r.invoice_code + '</strong></td><td>' + (r.client_name || '-') + '</td><td>' + (r.invoice_date || '-') + '</td><td>' + (r.due_date || '-') + '</td><td>MK ' + Number(r.total || 0).toLocaleString() + '</td><td>' + st + '</td><td><a href="/invoices/form/' + r.id + '" class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil"></i></a><button class="btn btn-sm btn-outline-danger" onclick="deleteItem(' + r.id + ')"><i class="bi bi-trash"></i></button></td></tr>';
+        }).join('');
+    }
+    async function deleteItem(id) { if (await confirmAction('Delete this invoice?')) { var res = await apiDelete('/invoices/api/' + id); if (res && res.ok) { showToast('Deleted'); loadData(); } } }
+    loadData();
+</script>
+{% endblock %}

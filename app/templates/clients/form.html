@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Client Form - Lab Software{% endblock %}
+{% block page_title %}Add/Edit Client{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form id="clientForm">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Client Name *</label>
+                            <input type="text" class="form-control" id="clientName" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Active</label>
+                            <select class="form-select" id="clientActive">
+                                <option value="1">Yes</option>
+                                <option value="0">No</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Contact Person</label>
+                            <input type="text" class="form-control" id="clientContact">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Phone</label>
+                            <input type="text" class="form-control" id="clientPhone">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="clientEmail">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Address</label>
+                            <input type="text" class="form-control" id="clientAddress">
+                        </div>
+                    </div>
+                    <div class="mt-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Save</button>
+                        <a href="/clients" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const pathParts = window.location.pathname.split('/');
+    const clientId = pathParts[pathParts.length - 1] !== 'form' ? pathParts[pathParts.length - 1] : null;
+
+    async function loadClient() {
+        if (!clientId) return;
+        const data = await apiGet('/clients/api/' + clientId);
+        if (!data) return;
+        document.getElementById('clientName').value = data.name;
+        document.getElementById('clientContact').value = data.contact_person || '';
+        document.getElementById('clientPhone').value = data.phone || '';
+        document.getElementById('clientEmail').value = data.email || '';
+        document.getElementById('clientAddress').value = data.address || '';
+        document.getElementById('clientActive').value = data.active;
+    }
+
+    document.getElementById('clientForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const payload = {
+            name: document.getElementById('clientName').value.trim(),
+            contact_person: document.getElementById('clientContact').value.trim(),
+            phone: document.getElementById('clientPhone').value.trim(),
+            email: document.getElementById('clientEmail').value.trim(),
+            address: document.getElementById('clientAddress').value.trim(),
+            active: parseInt(document.getElementById('clientActive').value)
+        };
+
+        let res;
+        if (clientId) { res = await apiPut('/clients/api/' + clientId, payload); }
+        else { res = await apiPost('/clients/api', payload); }
+        if (res && res.ok) { showToast('Saved'); window.location.href = '/clients'; }
+    });
+
+    loadClient();
+</script>
+{% endblock %}

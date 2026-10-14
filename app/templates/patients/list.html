@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Patients - Seal MW Lab System{% endblock %}
+{% block page_title %}Manage Patients{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex gap-2">
+        <input type="text" class="form-control form-control-sm" id="searchInput" placeholder="Search patients..." style="width:300px">
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-secondary btn-sm" onclick="printPatients()"><i class="bi bi-printer me-1"></i>Print</button>
+        <a href="/patients/form" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Add Patient</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="patientsTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="patientList"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    var allPatients = [];
+
+    async function loadPatients() {
+        var search = document.getElementById('searchInput').value;
+        var params = search ? '?search=' + encodeURIComponent(search) : '';
+        var data = await apiGet('/patients/api' + params);
+        if (!data) return;
+
+        allPatients = data;
+        var tbody = document.getElementById('patientList');
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><p>No patients found</p></td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(function(p) {
+            return '<tr>' +
+                '<td>' + p.id + '</td>' +
+                '<td><strong>' + p.name + '</strong></td>' +
+                '<td>' + (p.phone || '-') + '</td>' +
+                '<td>' + (p.email || '-') + '</td>' +
+                '<td>' + (p.active ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Inactive</span>') + '</td>' +
+                '<td>' +
+                    '<a href="/patients/form/' + p.id + '" class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil"></i></a>' +
+                    '<button class="btn btn-sm btn-outline-danger" onclick="deletePatient(' + p.id + ')"><i class="bi bi-trash"></i></button>' +
+                '</td>' +
+            '</tr>';
+        }).join('');
+    }
+
+    async function deletePatient(id) {
+        if (await confirmAction('Delete this patient?')) {
+            var res = await apiDelete('/patients/api/' + id);
+            if (res && res.ok) { showToast('Patient deleted'); loadPatients(); }
+        }
+    }
+
+    function printPatients() {
+        var printWindow = window.open('', '_blank');
+        var rows = allPatients.map(function(p) {
+            return '<tr><td>' + p.id + '</td><td>' + p.name + '</td><td>' + (p.phone || '-') + '</td><td>' + (p.email || '-') + '</td><td>' + (p.active ? 'Active' : 'Inactive') + '</td></tr>';
+        }).join('');
+
+        printWindow.document.write('<!DOCTYPE html><html><head><title>Patients Report - Seal MW Lab System</title>');
+        printWindow.document.write('<style>');
+        printWindow.document.write('body { font-family: Arial, sans-serif; padding: 20px; }');
+        printWindow.document.write('h1 { font-size: 20px; margin-bottom: 5px; }');
+        printWindow.document.write('p { color: #666; margin-bottom: 20px; }');
+        printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-top: 10px; }');
+        printWindow.document.write('th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }');
+        printWindow.document.write('th { background: #f5f5f5; font-weight: bold; }');
+        printWindow.document.write('.print-date { font-size: 11px; color: #999; margin-top: 20px; }');
+        printWindow.document.write('</style></head><body>');
+        printWindow.document.write('<h1>Seal MW Lab System</h1>');
+        printWindow.document.write('<p>Patients Report</p>');
+        printWindow.document.write('<table><thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Email</th><th>Status</th></tr></thead>');
+        printWindow.document.write('<tbody>' + rows + '</tbody></table>');
+        printWindow.document.write('<p class="print-date">Printed: ' + new Date().toLocaleString() + ' | Total: ' + allPatients.length + ' patients</p>');
+        printWindow.document.write('</body></html>');
+        printWindow.document.close();
+        printWindow.print();
+    }
+
+    document.getElementById('searchInput').addEventListener('input', debounce(loadPatients, 300));
+    function debounce(fn, ms) { var t; return function() { var args = arguments; clearTimeout(t); t = setTimeout(function() { fn.apply(null, args); }, ms); }; }
+
+    loadPatients();
+</script>
+{% endblock %}

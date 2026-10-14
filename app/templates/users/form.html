@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}User Form - Lab Software{% endblock %}
+{% block page_title %}Add/Edit User{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form id="userForm">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">First Name *</label>
+                            <input type="text" class="form-control" id="firstName" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Last Name *</label>
+                            <input type="text" class="form-control" id="lastName" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Username *</label>
+                            <input type="text" class="form-control" id="username" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Password <span id="pwNote" class="text-muted">(required for new users)</span></label>
+                            <input type="password" class="form-control" id="password">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Role *</label>
+                            <select class="form-select" id="role" required>
+                                <option value="sample_collector">Sample Collector</option>
+                                <option value="lab_tech">Lab Technician</option>
+                                <option value="lab_manager">Lab Manager</option>
+                                <option value="viewer">Viewer</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Active</label>
+                            <select class="form-select" id="active">
+                                <option value="1">Yes</option>
+                                <option value="0">No</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Save User</button>
+                        <a href="/users" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const pathParts = window.location.pathname.split('/');
+    const userId = pathParts[pathParts.length - 1] !== 'form' ? pathParts[pathParts.length - 1] : null;
+
+    async function loadUser() {
+        if (!userId) return;
+        const data = await apiGet('/users/api/' + userId);
+        if (!data) return;
+        document.getElementById('firstName').value = data.first_name;
+        document.getElementById('lastName').value = data.last_name;
+        document.getElementById('username').value = data.username;
+        document.getElementById('email').value = data.email || '';
+        document.getElementById('role').value = data.role;
+        document.getElementById('active').value = data.active;
+        document.getElementById('password').required = false;
+        document.getElementById('pwNote').textContent = '(leave blank to keep current)';
+    }
+
+    document.getElementById('userForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const payload = {
+            first_name: document.getElementById('firstName').value.trim(),
+            last_name: document.getElementById('lastName').value.trim(),
+            username: document.getElementById('username').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            role: document.getElementById('role').value,
+            active: parseInt(document.getElementById('active').value)
+        };
+
+        const pw = document.getElementById('password').value;
+        if (pw) payload.password = pw;
+
+        let res;
+        if (userId) { res = await apiPut('/users/api/' + userId, payload); }
+        else { res = await apiPost('/users/api', payload); }
+        if (res && res.ok) { showToast('User saved'); window.location.href = '/users'; }
+        else { showToast(res?.data?.error || 'Failed to save', 'danger'); }
+    });
+
+    loadUser();
+</script>
+{% endblock %}
