@@ -6,6 +6,7 @@ requires-python = ">=3.10"
 dependencies = [
     "flask",
     "flask-jwt-extended",
+    "flask-cors",
 ]
 
 [tool.vercel]
